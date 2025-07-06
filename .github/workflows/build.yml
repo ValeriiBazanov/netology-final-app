@@ -1,0 +1,47 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "release-*.*" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: cr.yandex/${{ secrets.REGISTRY_ID }}
+  IMAGE_NAME: netology-final-app
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Yandex Container Registry
+        run: |
+          # Установка yc CLI
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i ~/.local -n
+          export PATH=$PATH:~/.local/bin
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          
+          # Аутентификация
+          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > sa_key.json
+          yc config set service-account-key sa_key.json
+          yc container registry configure-docker
+
+      - name: Build and push image
+        run: |
+          # Сборка и отправка образа
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          
+          # Для тегированных коммитов
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG
+            docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG
+          fi
