@@ -50,7 +50,7 @@ jobs:
   
   deploy:
     needs: build-and-push
-    if: startsWith(github.ref, 'refs/tags/v')
+    #if: startsWith(github.ref, 'refs/tags/v')
     runs-on: self-hosted
     steps:
       - name: Checkout code
