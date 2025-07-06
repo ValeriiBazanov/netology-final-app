@@ -10,6 +10,8 @@ on:
 env:
   REGISTRY: cr.yandex/${{ secrets.REGISTRY_ID }}
   IMAGE_NAME: netology-final-app
+  DEPLOYMENT_NAME: netology-final-app
+  NAMESPACE: web
 
 jobs:
   build-and-push:
@@ -45,3 +47,21 @@ jobs:
             docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG
             docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG
           fi
+  
+  deploy:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set tag to env
+        run: |
+           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+           fi 
+      - name: Deploy to Kubernetes
+       
+        run: |
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} ${{ env.DEPLOYMENT_NAME }}=${{ env.IMAGE_NAME }}:${{ env.TAG }} -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }}
