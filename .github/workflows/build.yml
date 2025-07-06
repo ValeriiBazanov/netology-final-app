@@ -55,13 +55,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set tag to env
+
+      - name: Deploy to Kubernetes       
         run: |
-           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-           fi 
-      - name: Deploy to Kubernetes
-       
-        run: |
-          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} ${{ env.DEPLOYMENT_NAME }}=${{ env.IMAGE_NAME }}:${{ env.TAG }} -n ${{ env.NAMESPACE }}
+          TAG=${GITHUB_REF#refs/tags/}
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} ${{ env.DEPLOYMENT_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG -n ${{ env.NAMESPACE }}
           kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }}
